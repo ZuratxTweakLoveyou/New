@@ -1,8 +1,8 @@
 --[[
-    Murderers vs Sheriffs - Cyber White Edition (v3 Fixed)
+    Murderers vs Sheriffs - Cyber White Edition (v4 Final)
     Target Executor: Delta Executor
-    Gesture: 1 Finger Tap 3 Times (Global Mouse/Touch Receiver)
-    Features: Infinite Custom Hitbox Pro, Stable Auto Kill, Real Underground Desync, Auto 1 Ping
+    Gesture: 2 Fingers Tap 4 Times
+    Features: Underground Camera Fixed Desync, Infinite Custom Hitbox Pro, Auto Kill, Auto 1 Ping
 --]]
 
 local Players = game:GetService("Players")
@@ -50,7 +50,7 @@ UIStroke.Thickness = 2
 -- Title
 local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 45)
-Title.Text = "MvS HUB // WHITE VIP (FIXED)"
+Title.Text = "MvS HUB // WHITE VIP (2-FINGER FIX)"
 Title.TextColor3 = Color3.fromRGB(0, 0, 0)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 18
@@ -124,12 +124,13 @@ local function createInput(placeholder, callback)
     box.FocusLost:Connect(function() callback(box.Text) end)
 end
 
--- FIX BƯỚC 1: FIX CƠ CHẾ 1 NGÓN CHẠM 3 LẦN BẰNG INPUTENDED/BEGAN GLOBAL
+-- BƯỚC 1: FIX CƠ CHẾ 2 NGÓN CHẠM 4 LẦN
 local tapCount = 0
 local lastTapTime = 0
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+UserInputService.TouchStarted:Connect(function(touch, gameProcessed)
+    local activeTouches = UserInputService:GetTouches()
+    if #activeTouches == 2 then
         local currentTime = tick()
         if currentTime - lastTapTime < 0.45 then
             tapCount = tapCount + 1
@@ -138,28 +139,26 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         end
         lastTapTime = currentTime
 
-        if tapCount >= 3 then
+        if tapCount >= 4 then
             MainFrame.Visible = not MainFrame.Visible
             tapCount = 0
         end
     end
 end)
 
--- HÀM KIỂM TRA ĐỒNG ĐỘI (CHẤM XANH / TEAM COLOR)
+-- HÀM KIỂM TRA ĐỒNG ĐỘI
 local function isTeammate(player)
     if player == LocalPlayer then return true end
-    -- Phân biệt theo Team gốc Roblox
     if LocalPlayer.Team and player.Team and LocalPlayer.Team == player.Team then
         return true
     end
-    -- Phân biệt theo màu tên/chấm xanh trong game MvS
     if player.TeamColor == LocalPlayer.TeamColor then
         return true
     end
     return false
 end
 
--- 1. AUTO KILL STABLE (Chỉ giết kẻ địch, không dính đồng đội)
+-- 1. AUTO KILL STABLE
 createToggle("1. Auto Kill Team Địch", false, function(v) Settings.AutoKill = v end)
 
 task.spawn(function()
@@ -169,7 +168,6 @@ task.spawn(function()
                 local char = LocalPlayer.Character
                 local root = char and char:FindFirstChild("HumanoidRootPart")
                 if char and root then
-                    -- Tự động cầm vũ khí
                     local tool = char:FindFirstChildOfClass("Tool")
                     if not tool then
                         local bTool = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
@@ -200,7 +198,7 @@ task.spawn(function()
     end
 end)
 
--- 2. HITBOX PRO (Phân biệt Đồng Đội = Chấm/Viền Xanh Lá)
+-- 2. HITBOX PRO
 createToggle("2. Hitbox Pro (Anti-Lag)", false, function(v) Settings.HitboxPro = v end)
 createInput("Kích thước Hitbox (Tùy chỉnh vô hạn)...", function(text)
     local val = tonumber(text)
@@ -217,7 +215,6 @@ RunService.RenderStepped:Connect(function()
             if tRoot and pHum then
                 local box = tRoot:FindFirstChild("ProHitboxOutline")
                 if Settings.HitboxPro and pHum.Health > 0 then
-                    -- Đồng đội thì giữ nguyên kích thước, Kẻ địch mới phóng to Hitbox
                     if isTeammate(player) then
                         tRoot.Size = Vector3.new(2, 2, 1)
                         if not box then
@@ -226,7 +223,7 @@ RunService.RenderStepped:Connect(function()
                             box.Adornee = tRoot
                             box.Parent = tRoot
                         end
-                        box.Color3 = Color3.fromRGB(0, 255, 100) -- Đồng đội = Chấm/Viền Xanh Lá
+                        box.Color3 = Color3.fromRGB(0, 255, 100)
                     else
                         tRoot.Size = Vector3.new(Settings.HitboxSize, Settings.HitboxSize, Settings.HitboxSize)
                         tRoot.Transparency = 0.8
@@ -240,9 +237,9 @@ RunService.RenderStepped:Connect(function()
                         end
 
                         if pHum.Health < pHum.MaxHealth then
-                            box.Color3 = Color3.fromRGB(255, 0, 0) -- Đang dính dame = Đỏ
+                            box.Color3 = Color3.fromRGB(255, 0, 0)
                         else
-                            box.Color3 = Color3.fromRGB(255, 170, 0) -- Kẻ địch = Cam/Đỏ
+                            box.Color3 = Color3.fromRGB(255, 170, 0)
                         end
                     end
                 else
@@ -255,22 +252,22 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- 3. FIX TÀNG HÌNH: CAMERA & CLIENT BÌNH THƯỜNG - SERVER Ở DƯỚI LÒNG ĐẤT
-createToggle("3. Tàng Hình Underground Desync", false, function(v)
+-- 3. FIX TÀNG HÌNH: CƠ THỂ Ở DƯỚI ĐẤT - GÓC NHÌN Ở TRÊN MẶT ĐẤT
+createToggle("3. Tàng Hình UnderGround (Camera Trên Đất)", false, function(v)
     Settings.UndergroundInvis = v
 end)
 
-RunService.Heartbeat:Connect(function()
+local camOffset = Vector3.new(0, 50, 0)
+
+RunService.RenderStepped:Connect(function()
     if Settings.UndergroundInvis then
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if hrp then
-            local oldCFrame = hrp.CFrame
-            -- Dịch chuyển xuống dưới lòng đất trong Server Physics Step
-            hrp.CFrame = oldCFrame - Vector3.new(0, 50, 0)
-            RunService.RenderStepped:Wait()
-            -- Trả lại CFrame cũ trên Client để Camera và chuyển động giữ nguyên vị trí cũ
-            hrp.CFrame = oldCFrame
+            -- Ép cơ thể chìm xuống 50m dưới đất
+            hrp.CFrame = CFrame.new(hrp.Position.X, -50, hrp.Position.Z)
+            -- Cố định Camera nâng cao lên đúng tầm nhìn trên mặt đất
+            Camera.CFrame = Camera.CFrame + camOffset
         end
     end
 end)
