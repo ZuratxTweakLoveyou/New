@@ -1,0 +1,289 @@
+--[[
+    Murderers vs Sheriffs - Cyber White Edition (v3 Fixed)
+    Target Executor: Delta Executor
+    Gesture: 1 Finger Tap 3 Times (Global Mouse/Touch Receiver)
+    Features: Infinite Custom Hitbox Pro, Stable Auto Kill, Real Underground Desync, Auto 1 Ping
+--]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+-- System States
+local Settings = {
+    AutoKill = false,
+    HitboxPro = false, 
+    HitboxSize = 20,
+    UndergroundInvis = false,
+    FixLag1Ping = false
+}
+
+-- Root UI Setup
+local ParentGui = (gethui and gethui()) or LocalPlayer:WaitForChild("PlayerGui")
+local OldGui = ParentGui:FindFirstChild("MvS_WhiteMenu")
+if OldGui then OldGui:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MvS_WhiteMenu"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = ParentGui
+
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.fromOffset(320, 390)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -195)
+MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = true
+
+local UICorner = Instance.new("UICorner", MainFrame)
+UICorner.CornerRadius = UDim.new(0, 10)
+
+local UIStroke = Instance.new("UIStroke", MainFrame)
+UIStroke.Color = Color3.fromRGB(200, 200, 200)
+UIStroke.Thickness = 2
+
+-- Title
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 45)
+Title.Text = "MvS HUB // WHITE VIP (FIXED)"
+Title.TextColor3 = Color3.fromRGB(0, 0, 0)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 18
+Title.BackgroundTransparency = 1
+
+local Container = Instance.new("Frame", MainFrame)
+Container.Size = UDim2.new(1, -20, 1, -55)
+Container.Position = UDim2.new(0, 10, 0, 45)
+Container.BackgroundTransparency = 1
+
+local UIList = Instance.new("UIListLayout", Container)
+UIList.Padding = UDim.new(0, 8)
+
+-- Function tạo Toggle
+local function createToggle(name, defaultState, callback)
+    local btn = Instance.new("TextButton", Container)
+    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+    btn.Text = "  " .. name
+    btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 14
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+
+    local btnCorner = Instance.new("UICorner", btn)
+    btnCorner.CornerRadius = UDim.new(0, 6)
+
+    local statusBox = Instance.new("Frame", btn)
+    statusBox.Size = UDim2.fromOffset(50, 24)
+    statusBox.Position = UDim2.new(1, -60, 0.5, -12)
+    statusBox.BackgroundColor3 = defaultState and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(180, 180, 180)
+    
+    local boxCorner = Instance.new("UICorner", statusBox)
+    boxCorner.CornerRadius = UDim.new(0, 12)
+
+    local statusText = Instance.new("TextLabel", statusBox)
+    statusText.Size = UDim2.new(1, 0, 1, 0)
+    statusText.Text = defaultState and "BẬT" or "TẮT"
+    statusText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    statusText.Font = Enum.Font.SourceSansBold
+    statusText.TextSize = 12
+    statusText.BackgroundTransparency = 1
+
+    local state = defaultState
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        statusBox.BackgroundColor3 = state and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(180, 180, 180)
+        statusText.Text = state and "BẬT" or "TẮT"
+        callback(state)
+    end)
+end
+
+-- Function tạo Input
+local function createInput(placeholder, callback)
+    local box = Instance.new("TextBox", Container)
+    box.Size = UDim2.new(1, 0, 0, 36)
+    box.PlaceholderText = placeholder
+    box.Text = ""
+    box.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+    box.TextColor3 = Color3.fromRGB(0, 0, 0)
+    box.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
+    box.Font = Enum.Font.SourceSansBold
+    box.TextSize = 13
+    
+    local corner = Instance.new("UICorner", box)
+    corner.CornerRadius = UDim.new(0, 6)
+    
+    local stroke = Instance.new("UIStroke", box)
+    stroke.Color = Color3.fromRGB(210, 210, 210)
+    
+    box.FocusLost:Connect(function() callback(box.Text) end)
+end
+
+-- FIX BƯỚC 1: FIX CƠ CHẾ 1 NGÓN CHẠM 3 LẦN BẰNG INPUTENDED/BEGAN GLOBAL
+local tapCount = 0
+local lastTapTime = 0
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local currentTime = tick()
+        if currentTime - lastTapTime < 0.45 then
+            tapCount = tapCount + 1
+        else
+            tapCount = 1
+        end
+        lastTapTime = currentTime
+
+        if tapCount >= 3 then
+            MainFrame.Visible = not MainFrame.Visible
+            tapCount = 0
+        end
+    end
+end)
+
+-- HÀM KIỂM TRA ĐỒNG ĐỘI (CHẤM XANH / TEAM COLOR)
+local function isTeammate(player)
+    if player == LocalPlayer then return true end
+    -- Phân biệt theo Team gốc Roblox
+    if LocalPlayer.Team and player.Team and LocalPlayer.Team == player.Team then
+        return true
+    end
+    -- Phân biệt theo màu tên/chấm xanh trong game MvS
+    if player.TeamColor == LocalPlayer.TeamColor then
+        return true
+    end
+    return false
+end
+
+-- 1. AUTO KILL STABLE (Chỉ giết kẻ địch, không dính đồng đội)
+createToggle("1. Auto Kill Team Địch", false, function(v) Settings.AutoKill = v end)
+
+task.spawn(function()
+    while true do
+        if Settings.AutoKill then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if char and root then
+                    -- Tự động cầm vũ khí
+                    local tool = char:FindFirstChildOfClass("Tool")
+                    if not tool then
+                        local bTool = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
+                        if bTool then bTool.Parent = char; tool = bTool end
+                    end
+
+                    for _, target in ipairs(Players:GetPlayers()) do
+                        if not isTeammate(target) then
+                            local tChar = target.Character
+                            local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
+                            local tHum = tChar and tChar:FindFirstChildOfClass("Humanoid")
+
+                            if tRoot and tHum and tHum.Health > 0 then
+                                root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 1.2)
+                                if tool then tool:Activate() end
+                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                                task.wait(0.001)
+                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                            end
+                        end
+                    end
+                end
+            end)
+            task.wait(0.01)
+        else
+            task.wait(0.2)
+        end
+    end
+end)
+
+-- 2. HITBOX PRO (Phân biệt Đồng Đội = Chấm/Viền Xanh Lá)
+createToggle("2. Hitbox Pro (Anti-Lag)", false, function(v) Settings.HitboxPro = v end)
+createInput("Kích thước Hitbox (Tùy chỉnh vô hạn)...", function(text)
+    local val = tonumber(text)
+    if val then Settings.HitboxSize = val end
+end)
+
+RunService.RenderStepped:Connect(function()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local pChar = player.Character
+            local tRoot = pChar:FindFirstChild("HumanoidRootPart")
+            local pHum = pChar:FindFirstChildOfClass("Humanoid")
+
+            if tRoot and pHum then
+                local box = tRoot:FindFirstChild("ProHitboxOutline")
+                if Settings.HitboxPro and pHum.Health > 0 then
+                    -- Đồng đội thì giữ nguyên kích thước, Kẻ địch mới phóng to Hitbox
+                    if isTeammate(player) then
+                        tRoot.Size = Vector3.new(2, 2, 1)
+                        if not box then
+                            box = Instance.new("SelectionBox")
+                            box.Name = "ProHitboxOutline"
+                            box.Adornee = tRoot
+                            box.Parent = tRoot
+                        end
+                        box.Color3 = Color3.fromRGB(0, 255, 100) -- Đồng đội = Chấm/Viền Xanh Lá
+                    else
+                        tRoot.Size = Vector3.new(Settings.HitboxSize, Settings.HitboxSize, Settings.HitboxSize)
+                        tRoot.Transparency = 0.8
+                        tRoot.CanCollide = false
+
+                        if not box then
+                            box = Instance.new("SelectionBox")
+                            box.Name = "ProHitboxOutline"
+                            box.Adornee = tRoot
+                            box.Parent = tRoot
+                        end
+
+                        if pHum.Health < pHum.MaxHealth then
+                            box.Color3 = Color3.fromRGB(255, 0, 0) -- Đang dính dame = Đỏ
+                        else
+                            box.Color3 = Color3.fromRGB(255, 170, 0) -- Kẻ địch = Cam/Đỏ
+                        end
+                    end
+                else
+                    tRoot.Size = Vector3.new(2, 2, 1)
+                    tRoot.Transparency = 1
+                    if box then box:Destroy() end
+                end
+            end
+        end
+    end
+end)
+
+-- 3. FIX TÀNG HÌNH: CAMERA & CLIENT BÌNH THƯỜNG - SERVER Ở DƯỚI LÒNG ĐẤT
+createToggle("3. Tàng Hình Underground Desync", false, function(v)
+    Settings.UndergroundInvis = v
+end)
+
+RunService.Heartbeat:Connect(function()
+    if Settings.UndergroundInvis then
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local oldCFrame = hrp.CFrame
+            -- Dịch chuyển xuống dưới lòng đất trong Server Physics Step
+            hrp.CFrame = oldCFrame - Vector3.new(0, 50, 0)
+            RunService.RenderStepped:Wait()
+            -- Trả lại CFrame cũ trên Client để Camera và chuyển động giữ nguyên vị trí cũ
+            hrp.CFrame = oldCFrame
+        end
+    end
+end)
+
+-- 4. AUTO 1 PING FIX LAG
+createToggle("4. Auto 1 Ping (Fix Lag 240Hz)", false, function(v)
+    Settings.FixLag1Ping = v
+    if setfpscap then setfpscap(v and 240 or 60) end
+    if v then
+        for _, item in ipairs(Workspace:GetDescendants()) do
+            if item:IsA("BasePart") then item.Material = Enum.Material.SmoothPlastic end
+            if item:IsA("ParticleEmitter") or item:IsA("Trail") then item.Enabled = false end
+        end
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    end
+end)
